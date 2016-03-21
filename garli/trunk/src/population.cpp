@@ -931,185 +931,6 @@ void Population::ValidateInput(int rep){
 
     //this is really annoying and hacky - the maxPinv value is held by each model, and is data dependent (maxPinv can't be > obs pinv)
     //But, since a single model may apply to multiple data, need to be sure that the maxPinv is > the highest obs pinv of any of them
-    //now always setting the model default for each data subset (which due to linkage might reset the model several times), but this 
-    //shouldn't be problematic.  Note that the other data dependent model thing is empirical base freqs, but that will be disallowed
-    //elsewhere when there is linkage.
-    FLOAT_TYPE maxPinv = ZERO_POINT_ZERO;
-    for(vector<ClaSpecifier>::iterator c = claSpecs.begin();c != claSpecs.end();c++){
-        for(int m = 0;m < indiv[0].modPart.NumModels();m++){
-            if((*c).modelIndex == m){
-                indiv[0].modPart.GetModel(m)->SetDefaultModelParameters(dataPart->GetSubset((*c).dataIndex));
-                if(indiv[0].modPart.GetModel(m)->MaxPinv() > maxPinv) maxPinv = indiv[0].modPart.GetModel(m)->MaxPinv();
-                }
-            }
-        }
-    //we should only need to do this crap if the models are linked, but not currently allowing linking of some models but not others
-    if(conf->linkModels && modSpecSet.GetModSpec(0)->includeInvariantSites == true){
-        assert(indiv[0].modPart.NumModels() == 1);
-        if(maxPinv > ZERO_POINT_ZERO == false) throw ErrorException("invariantsites = estimate was specified, but no data subsets contained constant characters!");
-        indiv[0].modPart.GetModel(0)->SetMaxPinv(maxPinv);
-        indiv[0].modPart.GetModel(0)->SetPinv(maxPinv * 0.25, false);
-        }
-
-    //DEBUG - need to stick this in somewhere more natural so that it gets reset after a rep completes
-    indiv[0].modPart.Reset();
-
-    //This is getting very complicated.  Here are the allowable combinations.
-    //streefname not specified (random or stepwise)
-        //Case 1 - no gblock in datafile	
-        //Case 2 - found gblock in datafile
-    //streefname specified
-        //specified file is same as datafile
-            //Case 3 - Found trees block only
-            //Case 4 - Found gblock only (create random tree)
-            //Case 5 - Found both
-        //specified file not same as datafile
-            //NOTE that all of these are also possible with a gblock found in the datafile
-            //3/25/08 Change - a second gblock is not allowed (it will throw an exception
-            //upon reading the second in GarliReader::EnteringBlock), nor are both a garli block
-            //with the data and model params in the old format in the streefname
-            //specified streefname is Nexus
-                //Case 6 - Found trees block only
-                //Case 7 - Found gblock only (create random tree) (if a gblock was already read it will crap out)
-                //Case 8 - Found both (if a gblock was already read it will crap out)
-            //specified streefname is not Nexus
-                //Case 9 - found a tree
-                //Case 10 - found a model (create random tree) (if a gblock was already read it will crap out)
-                //Case 11 - found both (if a gblock was already read it will crap out)
-
-    GarliReader & reader = GarliReader::GetInstance();
-
-#ifdef INPUT_RECOMBINATION
-    if(0)
-#else
-    if((_stricmp(conf->streefname.c_str(), "random") != 0) && (_stricmp(conf->streefname.c_str(), "stepwise") != 0))
-        //some starting file has been specified - Cases 3-11
-#endif
-    {
-        //we already checked in Setup whether NCL has trees for us.  A starting model in Garli block will
-        //be handled below, although both a garli block (in the data) and an old style model specification
-        //are not allowed
-        if(startingTreeInNCL){//cases 3, 5, 6 and 8
-            //CAREFUL here - we may have more than one trees block because a tree could appear with the
-            //dataset and in a different starting tree file.  The factory api allows this fine, so we
-            //need to be sure to grab the last trees block.  Checking for whether the starting tree
-            //file contained multiple trees blocks was already done in LoadNexusStartingConditions
-            const NxsTreesBlock *treesblock = reader.GetTreesBlock(reader.GetTaxaBlock(0), reader.GetNumTreesBlocks(reader.GetTaxaBlock(0)) - 1);
-            assert(treesblock != NULL);
-            //this should verify some aspects of the tree description and change everything to taxon numbers
-            treesblock->ProcessAllTrees();
-            int numTrees = treesblock->GetNumTrees();
-            if(numTrees > 0){
-                int treeNum = (rank+rep-1) % numTrees;
-                indiv[0].GetStartingTreeFromNCL(treesblock, treeNum, dataPart->NTax());
-                outman.UserMessage("Obtained starting tree %d from Nexus", treeNum+1);
-                }
-            else throw ErrorException("Problem getting tree(s) from NCL!");
-            }
-        else if(strcmp(conf->streefname.c_str(), conf->datafname.c_str()) != 0 && !FileIsNexus(conf->streefname.c_str())){
-            //cases 9-11 if the streef file is not the same as the datafile, and it isn't Nexus
-            //use the old garli starting model/tree format
-            outman.UserMessage("Obtaining starting conditions from file %s", conf->streefname.c_str());
-            indiv[0].GetStartingConditionsFromFile(conf->streefname.c_str(), rank + rep - 1, dataPart->NTax());
-            }
-        indiv[0].SetDirty();
-        }
-
-    if(reader.FoundModelString()) 
-        startingModelInNCL = true;
-
-    if(startingModelInNCL || conf->parameterValueString.length() > 0){
-        //crap out if we already got some parameters above in an old style starting conditions file
-#ifndef SUBROUTINE_GARLI
-        if(modSpecSet.GotAnyParametersFromFile() && (currentSearchRep == 1 && (conf->bootstrapReps == 0 || currentBootstrapRep == 1)))
-            throw ErrorException("Found model parameters specified in a Nexus GARLI block with the dataset,\n\tand in the starting condition file (streefname).\n\tPlease use one or the other.");
-#endif
-        if(startingModelInNCL && conf->parameterValueString.length() > 0)
-            throw ErrorException("Found model parameters specified in the configuration file and in the dataset or starting condition file (streefname).\n\tPlease use one or the other.");
-        //model string from garli block, which could have come either in starting condition file
-        //or in file with Nexus dataset.  Cases 2, 4, 5, 7 and 8 come through here.
-
-        string modString;
-        if(startingModelInNCL)
-            modString = reader.GetModelString();
-        else
-            modString = conf->parameterValueString;
-
-        if(modString.length() > 0)
-            indiv[0].modPart.ReadGarliFormattedModelStrings(modString);
-
-        if(startingModelInNCL)
-            outman.UserMessage("Obtained starting or fixed model parameter values from Nexus:");
-        else
-            outman.UserMessage("Obtained starting or fixed model parameter values from configuration file:");
-        }
-
-    //The model params should be set to their initial values by now, so report them
-    if(conf->bootstrapReps == 0 || (currentBootstrapRep == 1 && currentSearchRep == 1)){
-        outman.UserMessage("MODEL REPORT - Parameters are at their INITIAL values (not yet optimized)");
-        indiv[0].modPart.OutputHumanReadableModelReportWithParams();
-        }
-
-    outman.UserMessage("Starting with seed=%d\n", rnd.seed());
-
-    //Here we'll error out if something was fixed but didn't appear
-    for(int ms = 0;ms < modSpecSet.NumSpecs();ms++){
-        const ModelSpecification *modSpec = modSpecSet.GetModSpec(ms);
-        if((_stricmp(conf->streefname.c_str(), "random") == 0) || (_stricmp(conf->streefname.c_str(), "stepwise") == 0)){
-            //if no streefname file was specified, the param values should be in a garli block with the dataset
-            if(modSpec->IsNucleotide() && modSpec->IsUserSpecifiedStateFrequencies() && !modSpec->gotStateFreqsFromFile) 
-                throw(ErrorException("state frequencies specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
-            else if(modSpec->fixAlpha && !modSpec->gotAlphaFromFile) 
-                throw(ErrorException("alpha parameter specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
-            else if(modSpec->fixInvariantSites && !modSpec->gotPinvFromFile) 
-                throw(ErrorException("proportion of invariant sites specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
-            else if(modSpec->IsUserSpecifiedRateMatrix() && !modSpec->gotRmatFromFile) 
-                throw(ErrorException("relative rate matrix specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
-            else if(modSpec->IsCodon() && modSpec->fixOmega && !modSpec->gotOmegasFromFile)
-                throw(ErrorException("rate het model set to nonsynonymousfixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
-            }
-        else{
-            if((modSpec->IsNucleotide() || modSpec->IsAminoAcid()) && modSpec->IsUserSpecifiedStateFrequencies() && !modSpec->gotStateFreqsFromFile) 
-                throw ErrorException("state frequencies specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
-            else if(modSpec->fixAlpha && !modSpec->gotAlphaFromFile) 
-                throw ErrorException("alpha parameter specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
-            else if(modSpec->fixInvariantSites && !modSpec->gotPinvFromFile) 
-                throw ErrorException("proportion of invariant sites specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
-            else if(modSpec->IsUserSpecifiedRateMatrix() && !modSpec->gotRmatFromFile) 
-                throw ErrorException("relative rate matrix specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
-            else if(modSpec->IsCodon() && modSpec->fixOmega && !modSpec->gotOmegasFromFile)
-                throw ErrorException("rate het model set to nonsynonymousfixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
-            }
-        }
-
-    //the treestruct could be null if there was a start file that contained no tree
-    if((_stricmp(conf->streefname.c_str(), "random") != 0) && (_stricmp(conf->streefname.c_str(), "stepwise") != 0) && (indiv[0].treeStruct != NULL)){
-        bool foundPolytomies = indiv[0].treeStruct->ArbitrarilyBifurcate();
-        if(foundPolytomies) outman.UserMessage("WARNING: Polytomies found in start tree.  These were arbitrarily resolved.");
-    
-        indiv[0].treeStruct->root->CheckTreeFormation();
-        indiv[0].treeStruct->root->CheckforPolytomies();
-        }
-    
-    //if there are not mutable params in the model, remove any weight assigned to the model
-    if(indiv[0].modPart.NumMutableParams() == 0) {
-        if((conf->bootstrapReps == 0 && currentSearchRep == 1) || (currentBootstrapRep == 1 && currentSearchRep == 1))
-            outman.UserMessage("NOTE: Model contains no mutable parameters!\nSetting model mutation weight to zero.\n");
-        adap->modelMutateProb=ZERO_POINT_ZERO;
-        adap->UpdateProbs();
-        }
-    }
-
-void Population::SeedPopulationWithStartingTree(int rep){
-    for(unsigned i=0;i<total_size;i++){
-        if(indiv[i].treeStruct != NULL) indiv[i].treeStruct->RemoveTreeFromAllClas();
-        if(newindiv[i].treeStruct != NULL) newindiv[i].treeStruct->RemoveTreeFromAllClas();
-        }
-
-    //create the first indiv, and then copy the tree and clas
-
-    //this is really annoying and hacky - the maxPinv value is held by each model, and is data dependent (maxPinv can't be > obs pinv)
-    //But, since a single model may apply to multiple data, need to be sure that the maxPinv is > the highest obs pinv of any of them
     //now always setting the model default for each data subset (which due to linkage might reset the model several times), but this
     //shouldn't be problematic.  Note that the other data dependent model thing is empirical base freqs, but that will be disallowed
     //elsewhere when there is linkage.
@@ -1223,6 +1044,14 @@ void Population::SeedPopulationWithStartingTree(int rep){
             outman.UserMessage("Obtained starting or fixed model parameter values from configuration file:");
         }
 
+    //The model params should be set to their initial values by now, so report them
+    if(conf->bootstrapReps == 0 || (currentBootstrapRep == 1 && currentSearchRep == 1)){
+        outman.UserMessage("MODEL REPORT - Parameters are at their INITIAL values (not yet optimized)");
+        indiv[0].modPart.OutputHumanReadableModelReportWithParams();
+        }
+
+    outman.UserMessage("Starting with seed=%d\n", rnd.seed());
+
     //Here we'll error out if something was fixed but didn't appear
     for(int ms = 0;ms < modSpecSet.NumSpecs();ms++){
         const ModelSpecification *modSpec = modSpecSet.GetModSpec(ms);
@@ -1251,40 +1080,214 @@ void Population::SeedPopulationWithStartingTree(int rep){
             else if(modSpec->IsCodon() && modSpec->fixOmega && !modSpec->gotOmegasFromFile)
                 throw ErrorException("rate het model set to nonsynonymousfixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
             }
+        }
+
+    //the treestruct could be null if there was a start file that contained no tree
+    if((_stricmp(conf->streefname.c_str(), "random") != 0) && (_stricmp(conf->streefname.c_str(), "stepwise") != 0) && (indiv[0].treeStruct != NULL)){
+        bool foundPolytomies = indiv[0].treeStruct->ArbitrarilyBifurcate();
+        if(foundPolytomies) outman.UserMessage("WARNING: Polytomies found in start tree.  These were arbitrarily resolved.");
+
+        indiv[0].treeStruct->root->CheckTreeFormation();
+        indiv[0].treeStruct->root->CheckforPolytomies();
+        }
+
+    //if there are not mutable params in the model, remove any weight assigned to the model
+    if(indiv[0].modPart.NumMutableParams() == 0) {
+        if((conf->bootstrapReps == 0 && currentSearchRep == 1) || (currentBootstrapRep == 1 && currentSearchRep == 1))
+            outman.UserMessage("NOTE: Model contains no mutable parameters!\nSetting model mutation weight to zero.\n");
+        adap->modelMutateProb=ZERO_POINT_ZERO;
+        adap->UpdateProbs();
+        }
+    }
+
+void Population::SeedPopulationWithStartingTree(int rep)
+{
+    for(unsigned i=0;i<total_size;i++){
+        if(indiv[i].treeStruct != NULL)
+            indiv[i].treeStruct->RemoveTreeFromAllClas();
+        if(newindiv[i].treeStruct != NULL)
+            newindiv[i].treeStruct->RemoveTreeFromAllClas();
+    }
+
+      //create the first indiv, and then copy the tree and clas
+
+      //this is really annoying and hacky - the maxPinv value is held by each model, and is data dependent (maxPinv can't be > obs pinv)
+      //But, since a single model may apply to multiple data, need to be sure that the maxPinv is > the highest obs pinv of any of them
+      //now always setting the model default for each data subset (which due to linkage might reset the model several times), but this
+      //shouldn't be problematic.  Note that the other data dependent model thing is empirical base freqs, but that will be disallowed
+      //elsewhere when there is linkage.
+    FLOAT_TYPE maxPinv = ZERO_POINT_ZERO;
+    for(vector<ClaSpecifier>::iterator c = claSpecs.begin();c != claSpecs.end();c++){
+        for(int m = 0;m < indiv[0].modPart.NumModels();m++){
+            if((*c).modelIndex == m){
+                indiv[0].modPart.GetModel(m)->SetDefaultModelParameters(dataPart->GetSubset((*c).dataIndex));
+                if(indiv[0].modPart.GetModel(m)->MaxPinv() > maxPinv) maxPinv = indiv[0].modPart.GetModel(m)->MaxPinv();
+            }
+        }
+    }
+      //we should only need to do this crap if the models are linked, but not currently allowing linking of some models but not others
+    if(conf->linkModels && modSpecSet.GetModSpec(0)->includeInvariantSites == true){
+        assert(indiv[0].modPart.NumModels() == 1);
+        if(maxPinv > ZERO_POINT_ZERO == false) throw ErrorException("invariantsites = estimate was specified, but no data subsets contained constant characters!");
+        indiv[0].modPart.GetModel(0)->SetMaxPinv(maxPinv);
+        indiv[0].modPart.GetModel(0)->SetPinv(maxPinv * 0.25, false);
+    }
+
+      //DEBUG - need to stick this in somewhere more natural so that it gets reset after a rep completes
+    indiv[0].modPart.Reset();
+
+      //This is getting very complicated.  Here are the allowable combinations.
+      //streefname not specified (random or stepwise)
+      //Case 1 - no gblock in datafile
+      //Case 2 - found gblock in datafile
+      //streefname specified
+      //specified file is same as datafile
+      //Case 3 - Found trees block only
+      //Case 4 - Found gblock only (create random tree)
+      //Case 5 - Found both
+      //specified file not same as datafile
+      //NOTE that all of these are also possible with a gblock found in the datafile
+      //3/25/08 Change - a second gblock is not allowed (it will throw an exception
+      //upon reading the second in GarliReader::EnteringBlock), nor are both a garli block
+      //with the data and model params in the old format in the streefname
+      //specified streefname is Nexus
+      //Case 6 - Found trees block only
+      //Case 7 - Found gblock only (create random tree) (if a gblock was already read it will crap out)
+      //Case 8 - Found both (if a gblock was already read it will crap out)
+      //specified streefname is not Nexus
+      //Case 9 - found a tree
+      //Case 10 - found a model (create random tree) (if a gblock was already read it will crap out)
+      //Case 11 - found both (if a gblock was already read it will crap out)
+
+    GarliReader & reader = GarliReader::GetInstance();
+
+#ifdef INPUT_RECOMBINATION
+    if(0)
+#else
+        if((_stricmp(conf->streefname.c_str(), "random") != 0) && (_stricmp(conf->streefname.c_str(), "stepwise") != 0))
+              //some starting file has been specified - Cases 3-11
+#endif
+        {
+              //we already checked in Setup whether NCL has trees for us.  A starting model in Garli block will
+              //be handled below, although both a garli block (in the data) and an old style model specification
+              //are not allowed
+            if(startingTreeInNCL){//cases 3, 5, 6 and 8
+                  //CAREFUL here - we may have more than one trees block because a tree could appear with the
+                  //dataset and in a different starting tree file.  The factory api allows this fine, so we
+                  //need to be sure to grab the last trees block.  Checking for whether the starting tree
+                  //file contained multiple trees blocks was already done in LoadNexusStartingConditions
+                const NxsTreesBlock *treesblock = reader.GetTreesBlock(reader.GetTaxaBlock(0), reader.GetNumTreesBlocks(reader.GetTaxaBlock(0)) - 1);
+                assert(treesblock != NULL);
+                  //this should verify some aspects of the tree description and change everything to taxon numbers
+                treesblock->ProcessAllTrees();
+                int numTrees = treesblock->GetNumTrees();
+                if(numTrees > 0){
+                    int treeNum = (rank+rep-1) % numTrees;
+                    indiv[0].GetStartingTreeFromNCL(treesblock, treeNum, dataPart->NTax());
+                    outman.UserMessage("Obtained starting tree %d from Nexus", treeNum+1);
+                }
+                else throw ErrorException("Problem getting tree(s) from NCL!");
+            }
+            else if(strcmp(conf->streefname.c_str(), conf->datafname.c_str()) != 0 && !FileIsNexus(conf->streefname.c_str())){
+                  //cases 9-11 if the streef file is not the same as the datafile, and it isn't Nexus
+                  //use the old garli starting model/tree format
+                outman.UserMessage("Obtaining starting conditions from file %s", conf->streefname.c_str());
+                indiv[0].GetStartingConditionsFromFile(conf->streefname.c_str(), rank + rep - 1, dataPart->NTax());
+            }
+            indiv[0].SetDirty();
+        }
+
+    if(reader.FoundModelString())
+        startingModelInNCL = true;
+
+    if(startingModelInNCL || conf->parameterValueString.length() > 0){
+          //crap out if we already got some parameters above in an old style starting conditions file
+#ifndef SUBROUTINE_GARLI
+        if(modSpecSet.GotAnyParametersFromFile() && (currentSearchRep == 1 && (conf->bootstrapReps == 0 || currentBootstrapRep == 1)))
+            throw ErrorException("Found model parameters specified in a Nexus GARLI block with the dataset,\n\tand in the starting condition file (streefname).\n\tPlease use one or the other.");
+#endif
+        if(startingModelInNCL && conf->parameterValueString.length() > 0)
+            throw ErrorException("Found model parameters specified in the configuration file and in the dataset or starting condition file (streefname).\n\tPlease use one or the other.");
+          //model string from garli block, which could have come either in starting condition file
+          //or in file with Nexus dataset.  Cases 2, 4, 5, 7 and 8 come through here.
+
+        string modString;
+        if(startingModelInNCL)
+            modString = reader.GetModelString();
+        else
+            modString = conf->parameterValueString;
+
+        if(modString.length() > 0)
+            indiv[0].modPart.ReadGarliFormattedModelStrings(modString);
+
+        if(startingModelInNCL)
+            outman.UserMessage("Obtained starting or fixed model parameter values from Nexus:");
+        else
+            outman.UserMessage("Obtained starting or fixed model parameter values from configuration file:");
+    }
+
+      //Here we'll error out if something was fixed but didn't appear
+    for(int ms = 0;ms < modSpecSet.NumSpecs();ms++){
+        const ModelSpecification *modSpec = modSpecSet.GetModSpec(ms);
+        if((_stricmp(conf->streefname.c_str(), "random") == 0) || (_stricmp(conf->streefname.c_str(), "stepwise") == 0)){
+              //if no streefname file was specified, the param values should be in a garli block with the dataset
+            if(modSpec->IsNucleotide() && modSpec->IsUserSpecifiedStateFrequencies() && !modSpec->gotStateFreqsFromFile)
+                throw(ErrorException("state frequencies specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
+            else if(modSpec->fixAlpha && !modSpec->gotAlphaFromFile)
+                throw(ErrorException("alpha parameter specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
+            else if(modSpec->fixInvariantSites && !modSpec->gotPinvFromFile)
+                throw(ErrorException("proportion of invariant sites specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
+            else if(modSpec->IsUserSpecifiedRateMatrix() && !modSpec->gotRmatFromFile)
+                throw(ErrorException("relative rate matrix specified as fixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
+            else if(modSpec->IsCodon() && modSpec->fixOmega && !modSpec->gotOmegasFromFile)
+                throw(ErrorException("rate het model set to nonsynonymousfixed, but no\n\tGarli block found in %s!!" , conf->datafname.c_str()));
+        }
+        else{
+            if((modSpec->IsNucleotide() || modSpec->IsAminoAcid()) && modSpec->IsUserSpecifiedStateFrequencies() && !modSpec->gotStateFreqsFromFile)
+                throw ErrorException("state frequencies specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
+            else if(modSpec->fixAlpha && !modSpec->gotAlphaFromFile)
+                throw ErrorException("alpha parameter specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
+            else if(modSpec->fixInvariantSites && !modSpec->gotPinvFromFile)
+                throw ErrorException("proportion of invariant sites specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
+            else if(modSpec->IsUserSpecifiedRateMatrix() && !modSpec->gotRmatFromFile)
+                throw ErrorException("relative rate matrix specified as fixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
+            else if(modSpec->IsCodon() && modSpec->fixOmega && !modSpec->gotOmegasFromFile)
+                throw ErrorException("rate het model set to nonsynonymousfixed, but no\n\tparameter values found in %s or %s!", conf->streefname.c_str(), conf->datafname.c_str());
+        }
         if(conf->modWeight == ZERO_POINT_ZERO)
             if(modSpec->IsCodon() && modSpec->gotOmegasFromFile == false)
                 throw(ErrorException("sorry, to turn off model mutations you must provide omega values in a codon model.\nSet modweight to > 0.0 or provide omega values."));
-        }
+    }
 
-    //The model params should be set to their initial values by now, so report them
+      //The model params should be set to their initial values by now, so report them
     if(conf->bootstrapReps == 0 || (currentBootstrapRep == 1 && currentSearchRep == 1)){
         outman.UserMessage("MODEL REPORT - Parameters are at their INITIAL values (not yet optimized)");
         indiv[0].modPart.OutputHumanReadableModelReportWithParams();
-        }
+    }
 
     outman.UserMessage("Starting with seed=%d\n", rnd.seed());
 
-    //A random tree specified, or a starting file was specified but contained no tree
+      //A random tree specified, or a starting file was specified but contained no tree
     if(_stricmp(conf->streefname.c_str(), "stepwise") == 0){
         if(Tree::constraints.empty()) outman.UserMessage("creating likelihood stepwise addition starting tree...");
         else outman.UserMessage("creating likelihood stepwise addition starting tree (compatible with constraints)...");
-        //5/20/08 If we're making a stepwise tree, we depend on the extern globalBest being zero to keep the optimization
-        //during the stepwise creation to be localized to just the three branches (the radius optimization only happens if
-        //the lnL of created tree is within a threshold of the global best).  Having global best = zero effectively turns
-        //off all radius opt.  There was a bug here because it wasn't getting reset before starting search reps after the
-        //first.  This caused the stepwise to be slow, and to not be reproducible when the seed from a rep > 1 was specified
-        //as the initial seed for a new run
+          //5/20/08 If we're making a stepwise tree, we depend on the extern globalBest being zero to keep the optimization
+          //during the stepwise creation to be localized to just the three branches (the radius optimization only happens if
+          //the lnL of created tree is within a threshold of the global best).  Having global best = zero effectively turns
+          //off all radius opt.  There was a bug here because it wasn't getting reset before starting search reps after the
+          //first.  This caused the stepwise to be slow, and to not be reproducible when the seed from a rep > 1 was specified
+          //as the initial seed for a new run
         globalBest = ZERO_POINT_ZERO;
-        //DEBUG - haven't worked this out with the rooted tree yet, since the fake root needs to be in the tree before it is scored
+          //DEBUG - haven't worked this out with the rooted tree yet, since the fake root needs to be in the tree before it is scored
         assert(!indiv[0].treeStruct->rootWithDummy);
         indiv[0].MakeStepwiseTree(dataPart->NTax(), conf->attachmentsPerTaxon, adap->branchOptPrecision);
-        }
+    }
     else if(_stricmp(conf->streefname.c_str(), "random") == 0 || indiv[0].treeStruct == NULL){
         if(Tree::constraints.empty()) outman.UserMessage("creating random starting tree...");
         else outman.UserMessage("creating random starting tree (compatible with constraints)...");
         indiv[0].MakeRandomTree(dataPart->NTax());
         indiv[0].SetDirty();
-        }
+    }
 
     assert(indiv[0].treeStruct != NULL);
     bool foundPolytomies = indiv[0].treeStruct->ArbitrarilyBifurcate();
@@ -1299,12 +1302,12 @@ void Population::SeedPopulationWithStartingTree(int rep){
 
     try{
         indiv[0].CalcFitness(0);
-        }
+    }
     catch(UnscoreableException &ex){
         throw ErrorException("Initial individual unscorable, perhaps due to poorness of starting tree.\n\tTry providing a tree if you previously tried random.");
-        }
+    }
 
-    //check the current likelihood now to know how accurate we can expect them to be later
+      //check the current likelihood now to know how accurate we can expect them to be later
 #ifdef SINGLE_PRECISION_FLOATS
     Tree::expectedPrecision = pow(10.0, - (double) ((int) FLT_DIG - ceil(log10(-indiv[0].Fitness()))));
 #else
@@ -1312,13 +1315,13 @@ void Population::SeedPopulationWithStartingTree(int rep){
 #endif
 //	outman.UserMessage("expected likelihood precision = %.4e", Tree::expectedPrecision);
 
-    //if there are not mutable params in the model, remove any weight assigned to the model
+      //if there are not mutable params in the model, remove any weight assigned to the model
     if(indiv[0].modPart.NumMutableParams() == 0) {
         if((conf->bootstrapReps == 0 && currentSearchRep == 1) || (currentBootstrapRep == 1 && currentSearchRep == 1))
             outman.UserMessage("NOTE: Model contains no mutable parameters!\nSetting model mutation weight to zero.\n");
         adap->modelMutateProb=ZERO_POINT_ZERO;
         adap->UpdateProbs();
-        }
+    }
 
     outman.precision(10);
     outman.UserMessage("Initial ln Likelihood: %.4f", indiv[0].Fitness());
@@ -1329,19 +1332,19 @@ void Population::SeedPopulationWithStartingTree(int rep){
 #endif
 
     if(conf->refineStart==true && !conf->scoreOnly){
-        //12/26/07 now only passing the first argument here ("optModel") as false if no model muts are used
-        //if single parameters are fixed that will be checked in the Refine function itself
-        //5/15/14 Moved the initial refinement phase to the Population level, which makes more sense and
-        //mirrors the final optimization behavior
-        //indiv[0].RefineStartingConditions(adap->modWeight != ZERO_POINT_ZERO, adap->branchOptPrecision);
+          //12/26/07 now only passing the first argument here ("optModel") as false if no model muts are used
+          //if single parameters are fixed that will be checked in the Refine function itself
+          //5/15/14 Moved the initial refinement phase to the Population level, which makes more sense and
+          //mirrors the final optimization behavior
+          //indiv[0].RefineStartingConditions(adap->modWeight != ZERO_POINT_ZERO, adap->branchOptPrecision);
         InitialOptimization(&indiv[0], adap->modWeight != ZERO_POINT_ZERO, adap->branchOptPrecision);
         indiv[0].CalcFitness(0);
         outman.UserMessage("lnL after optimization: %.4f", indiv[0].Fitness());
-        }
+    }
 
     globalBest=bestFitness=prevBestFitness=indiv[0].Fitness();
 
-    //don't bother allocating any further indivs if we will only use one
+      //don't bother allocating any further indivs if we will only use one
     if(conf->optimizeInputOnly || conf->scoreOnly)
         return;
 
@@ -1351,27 +1354,27 @@ void Population::SeedPopulationWithStartingTree(int rep){
             indiv[i].treeStruct = new Tree();
         indiv[i].CopySecByRearrangingNodesOfFirst(indiv[i].treeStruct, &indiv[0]);
         indiv[i].treeStruct->modPart=&indiv[i].modPart;
-        }
+    }
 #else
     for(unsigned i=1;i<conf->nindivs;i++){
         if(indiv[i].treeStruct == NULL)
             indiv[i].treeStruct = new Tree();
         indiv[i].CopySecByRearrangingNodesOfFirst(indiv[i].treeStruct, &indiv[0]);
         indiv[i].treeStruct->modPart=&indiv[i].modPart;
-        }
+    }
 
-    //string inputs="sphinx.input6000.goodmod.tre";
+      //string inputs="sphinx.input6000.goodmod.tre";
     for(unsigned i=conf->nindivs;i<total_size;i++){
         indiv[i].GetStartingConditionsFromFile(conf->streefname.c_str(), i-conf->nindivs, dataPart->NTax());
         indiv[i].treeStruct->modPart=&indiv[i].modPart;
         indiv[i].SetDirty();
-        //indiv[i].RefineStartingConditions((adap->modWeight == ZERO_POINT_ZERO || modSpec->fixAlpha == true) == false, adap->branchOptPrecision);
+          //indiv[i].RefineStartingConditions((adap->modWeight == ZERO_POINT_ZERO || modSpec->fixAlpha == true) == false, adap->branchOptPrecision);
         indiv[i].CalcFitness(0);
-        }
+    }
 #endif
 
     CalcAverageFitness();
-    }
+}
 
 //Copied almost exactly from Individual::RefineStartingConditions.  For various reasons it is easier
 //to have it at the population level.

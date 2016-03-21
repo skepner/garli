@@ -286,7 +286,8 @@ void Individual::MakeRandomTree(int nTax){
     treeStruct->AssignCLAsFromMaster();
     }
 
-void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE optPrecision ){
+void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE optPrecision )
+{
     treeStruct=new Tree();
     treeStruct->modPart = &modPart;
     treeStruct->AssignCLAsFromMaster();
@@ -316,19 +317,19 @@ void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE opt
         else
             scratchT->RandomlyAttachTipWithConstraints(k, placeInAllNodes, &mask );
         taxset -= k;
-        }
-    //use information on the similarity between sequences to choose first stepwise additions
+    }
+      //use information on the similarity between sequences to choose first stepwise additions
 /*
-    const SequenceData *dat = treeStruct->data;
-    int nstates = mod->NStates();
-    FLOAT_TYPE **pdist = New2DArray<FLOAT_TYPE>(dat->NTax(), dat->NTax());
-    for(int i=0;i<nTax;i++){
-        pdist[i][i] = 0.0;
-        for(int j=i+1;j<nTax;j++){
-            pdist[i][j] = CalculateHammingDistance((char*) dat->GetRow(i), (char*) dat->GetRow(j), dat->GetCounts(), dat->NChar(), nstates);
-            pdist[j][i] = pdist[i][j];
-            }
-        }
+  const SequenceData *dat = treeStruct->data;
+  int nstates = mod->NStates();
+  FLOAT_TYPE **pdist = New2DArray<FLOAT_TYPE>(dat->NTax(), dat->NTax());
+  for(int i=0;i<nTax;i++){
+  pdist[i][i] = 0.0;
+  for(int j=i+1;j<nTax;j++){
+  pdist[i][j] = CalculateHammingDistance((char*) dat->GetRow(i), (char*) dat->GetRow(j), dat->GetCounts(), dat->NChar(), nstates);
+  pdist[j][i] = pdist[i][j];
+  }
+  }
     //add the first 3
     //be careful because the taxa are indexed from 1->ntax
     int pos = rnd.random_int( taxset.Size() );
@@ -336,38 +337,38 @@ void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE opt
     scratchT->RandomlyAttachTip(first, placeInAllNodes  );
     taxset -= first;
 
-    //add the furthest taxon to that
-    int sec = 1;
-    FLOAT_TYPE maxDist = pdist[first-1][sec-1];
-    for(int i=sec+1;i<=dat->NTax();i++){
-        if(pdist[first-1][i-1] > maxDist){
-            sec = i;
-            maxDist = pdist[first-1][sec-1];
-            }
-        }
-    scratchT->RandomlyAttachTip(sec, placeInAllNodes  );
-    taxset -= sec;
-    //add the furthest taxon to that (which may in fact be close to first, but should not have a pdist = 0 to it)
-    int third = (first == 1 ? 2 : 1);
-    maxDist = pdist[sec-1][third-1];
-    for(int i=third+1;i<=dat->NTax();i++){
+      //add the furthest taxon to that
+      int sec = 1;
+      FLOAT_TYPE maxDist = pdist[first-1][sec-1];
+      for(int i=sec+1;i<=dat->NTax();i++){
+      if(pdist[first-1][i-1] > maxDist){
+      sec = i;
+      maxDist = pdist[first-1][sec-1];
+      }
+      }
+      scratchT->RandomlyAttachTip(sec, placeInAllNodes  );
+      taxset -= sec;
+        //add the furthest taxon to that (which may in fact be close to first, but should not have a pdist = 0 to it)
+        int third = (first == 1 ? 2 : 1);
+        maxDist = pdist[sec-1][third-1];
+        for(int i=third+1;i<=dat->NTax();i++){
         if(pdist[sec-1][i] > maxDist && i != first && pdist[first-1][third-1] > ZERO_POINT_ZERO){
-            third = i;
-            maxDist = pdist[sec-1][third-1];
-            }
+        third = i;
+        maxDist = pdist[sec-1][third-1];
         }
-    scratchT->RandomlyAttachTip(third, placeInAllNodes  );
-    taxset -= third;
+        }
+        scratchT->RandomlyAttachTip(third, placeInAllNodes  );
+        taxset -= third;
 */
     CopySecByRearrangingNodesOfFirst(treeStruct, &scratchI, true);
 
     for( int i = 3; i < n; i++ ) {
-        //select a random node
+          //select a random node
         int pos = rnd.random_int( taxset.Size() );
         int k = taxset[pos];
         taxset -= k;
-        //add the node randomly - this is a little odd, but for the existing swap collecting machinery
-        //to work right, the taxon to be added needs to already be in the tree
+          //add the node randomly - this is a little odd, but for the existing swap collecting machinery
+          //to work right, the taxon to be added needs to already be in the tree
         if(treeStruct->constraints.empty())
             scratchT->RandomlyAttachTip(k, placeInAllNodes  );
         else
@@ -377,62 +378,62 @@ void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE opt
         scratchT->SweepDirtynessOverTree(added);
         scratchT->OptimizeBranchesWithinRadius(added->anc, optPrecision, 0, NULL);
 
-        //backup what we have now
+          //backup what we have now
         CopySecByRearrangingNodesOfFirst(treeStruct, &scratchI, true);
         FLOAT_TYPE bestScore = scratchT->lnL;
 
-        //collect reconnection points - this will automatically filter for constraints
+          //collect reconnection points - this will automatically filter for constraints
         scratchT->GatherValidReconnectionNodes(scratchT->NTax()*2, added, NULL, &mask);
 
 //			stepout << i << "\t" << k << "\t" << bestScore << "\t";
 
-        //start swappin
+          //start swappin
         int num=0;
-        //for(list<ReconNode>::iterator b = scratchT->sprRang.begin();b != scratchT->sprRang.end();b++){
+          //for(list<ReconNode>::iterator b = scratchT->sprRang.begin();b != scratchT->sprRang.end();b++){
         ReconList attempted;
         while(num < attachesPerTaxon && scratchT->sprRang.size() > 0){
             int connectNum = rnd.random_int(scratchT->sprRang.size());
             listIt broken = scratchT->sprRang.NthElement(connectNum);
-            //try a reattachment point
+              //try a reattachment point
             scratchT->SPRMutate(added->nodeNum, &(*broken), optPrecision, 0);
-            //record the score
+              //record the score
             broken->chooseProb = scratchT->lnL;
             attempted.AddNode(*broken);
             scratchT->sprRang.RemoveNthElement(connectNum);
 //			stepout << scratchT->lnL << "\t";
-            //restore the tree
+              //restore the tree
             scratchI.CopySecByRearrangingNodesOfFirst(scratchT, this, true);
             num++;
-            }
-        //now find the best score
+        }
+          //now find the best score
         ReconNode *best = NULL;
 
-        //For debugging, add to random place, to check correct filtering of attachment points for constraints
+          //For debugging, add to random place, to check correct filtering of attachment points for constraints
 /*
-        if(attempted.size() != 0)
-            best = attempted.RandomReconNode();
+  if(attempted.size() != 0)
+  best = attempted.RandomReconNode();
 */
         for(list<ReconNode>::iterator b = attempted.begin();b != attempted.end();b++){
             if((*b).chooseProb > bestScore){
                 best = &(*b);
                 bestScore = (*b).chooseProb;
-                }
             }
+        }
 
-        //if we didn't find anything better than the initial random attachment we don't need to do anything
+          //if we didn't find anything better than the initial random attachment we don't need to do anything
         if(best != NULL){
             scratchT->SPRMutate(added->nodeNum, best, optPrecision, 0);
-            }
+        }
         else scratchT->Score();
         scratchI.CalcFitness(0);
 
 //		stepout << scratchT->lnL << endl;
         CopySecByRearrangingNodesOfFirst(treeStruct, &scratchI, true);
 
-        //outman.UserMessage(" %d %f", i+1, scratchT->lnL);
+          //outman.UserMessage(" %d %f", i+1, scratchT->lnL);
         outman.UserMessageNoCR(" %d ", i+1);
         outman.flush();
-        //when we've added half the taxa optimize alpha, flex or omega
+          //when we've added half the taxa optimize alpha, flex or omega
         if(i == (n/2)){
             FLOAT_TYPE improve = 0.0;
             for(int modnum = 0;modnum < modPart.NumModels();modnum++){
@@ -442,36 +443,36 @@ void Individual::MakeStepwiseTree(int nTax, int attachesPerTaxon, FLOAT_TYPE opt
                     improve += scratchT->OptimizeOmegaParameters(optPrecision, modnum);
                 else if(mod->NRateCats() > 1){
                     if(modSpec->IsFlexRateHet()){//Flex rates
-                        //no longer doing alpha first, it was too hard to know if the flex rates had been partially optimized
-                        //already during making of a stepwise tree
+                          //no longer doing alpha first, it was too hard to know if the flex rates had been partially optimized
+                          //already during making of a stepwise tree
                         improve += scratchT->OptimizeFlexRates(optPrecision, modnum);
-                        }
-                    else if(modSpec->fixAlpha == false){//normal gamma
-                        //do NOT let alpha go too low here - on bad or random starting trees the branch lengths get crazy long
-                        improve += scratchT->OptimizeBoundedParameter(modnum, optPrecision, mod->Alpha(), 0, 0.05, 999.9, &Model::SetAlpha);
-                        }
                     }
+                    else if(modSpec->fixAlpha == false){//normal gamma
+                          //do NOT let alpha go too low here - on bad or random starting trees the branch lengths get crazy long
+                        improve += scratchT->OptimizeBoundedParameter(modnum, optPrecision, mod->Alpha(), 0, 0.05, 999.9, &Model::SetAlpha);
+                    }
+                }
                 if(modSpec->includeInvariantSites && !modSpec->fixInvariantSites)
                     improve += scratchT->OptimizeBoundedParameter(modnum, optPrecision, mod->PropInvar(), 0, 1.0e-8, mod->maxPropInvar, &Model::SetPinv);
-                }
+            }
             if(modSpecSet.InferSubsetRates()){
                 improve += scratchT->OptimizeSubsetRates(optPrecision);
-                }
+            }
             outman.UserMessageNoCR("\nOptimizing parameters... improved %.3f lnL", improve);
             scratchT->Score();
             FLOAT_TYPE start=scratchT->lnL;
             scratchT->OptimizeAllBranches(optPrecision);
             FLOAT_TYPE bimprove = max(scratchT->lnL - start, 0.0);
             outman.UserMessage("\nOptimizing branchlengths... improved %.3f lnL", bimprove);
-            }
         }
+    }
 
 //	stepout.close();
     outman.UserMessage("");
     scratchI.treeStruct->RemoveTreeFromAllClas();
     delete scratchI.treeStruct;
     scratchI.treeStruct=NULL;
-    }
+}
 
 
 void Individual::GetStartingConditionsFromFile(const char* fname, int rank, int nTax, bool restart /*=false*/){
