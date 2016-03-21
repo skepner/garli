@@ -1,6 +1,7 @@
 // GARLI Version 2.1 (September 2014)
 // Copyright 2005-2014 Derrick J. Zwickl
 // email: garli.support@gmail.com
+// Modified by Eugene Skepner <github@skepner.eu> 2016-03-21
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -19,10 +20,10 @@ Please let me know of any problems, concerns or feedback (garli.support@gmail.co
 
 GARLI version 2.1 is a minor update to version 2.0.
 Versions >= 2.0 include models for nucleotides, amino acids,
-odons, and morphology-like characters, any of which can be 
+odons, and morphology-like characters, any of which can be
 mixed together and applied to different subsets of data.
 
-Version 2.X should replace earlier versions, and should be backwards compatible with all 
+Version 2.X should replace earlier versions, and should be backwards compatible with all
 configuration files and datasets that were used with the previous versions.
 
 ->See the support website (http://www.nescent.org/wg/garli) for detailed information on
@@ -34,11 +35,11 @@ using the program.  For very basic usage see QuickStart.txt.
 script, build_garli.sh, which should make compalation trivial on linux or OS X machines.
 
 ***New in version 2.1***
-1. MUCH faster parsing of very long alignments.  e.g., alignments millions of nucleotides in 
+1. MUCH faster parsing of very long alignments.  e.g., alignments millions of nucleotides in
    length should be read thousands of times faster.
 2. Lower memory usage with very large alignments.
 3. Added ignorestopcodons entry to ignore stops rather than error out.
-4. Better translation to amino acid characters in codon-aminoacid models. Codons containing ambiguity 
+4. Better translation to amino acid characters in codon-aminoacid models. Codons containing ambiguity
    are no longer discarded if all resolutions of the ambiguity translate to the same amino acid.
 5. Ability to read and use NEXUS wtsets to specify character counts.
 6. Many changes in BOINC mode.
@@ -47,7 +48,7 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
 ***New in version 2.0***
 
 1. Ability to use partitioned models, giving the ability to divide up data and apply independent
-   models to each.   See this page for details on partitioned usage 
+   models to each.   See this page for details on partitioned usage
    http://www.nescent.org/wg/garli/Using_partitioned_models
 2. Ability to use the Mk/Mkv "morphology" models of Lewis, 2001.  This can be applied to discrete
    data of any type with any number of states. http://www.nescent.org/wg/garli/Mkv_morphology_model
@@ -56,8 +57,8 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
 
 ***New in version 1.0***
 
-1. Ability to write sitewise log-likelihood values for all model types, in a format identical to 
-   PAUP*.  This can be read directly into a program like CONSEL to perform statistical comparisons 
+1. Ability to write sitewise log-likelihood values for all model types, in a format identical to
+   PAUP*.  This can be read directly into a program like CONSEL to perform statistical comparisons
    of topologies such as the SH or AU tests. (outputsitelikelihoods = 1)
 2. Ability to collapse zero length branches at the end of any search, creating polytomies. This is
    now turned on by default. This setting can affect bootstrap values, since zero-length branches in
@@ -66,11 +67,11 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
    resolutions of zero length branches are not truly different.  (collapsebranches = 1)
 3. Ability to infer full reversible amino acid rate matrices while doing a normal searching,
    adding 189 free parameters.  This is probably not something of general utility unless you have
-   a very large dataset. (datatype = aminoacid or codon-aminoacid, ratematrix = estimate) 
+   a very large dataset. (datatype = aminoacid or codon-aminoacid, ratematrix = estimate)
 4. Ability to use user-specified amino acid rate matrices. This allows the use of any existing
-   amino acid matrix, regardless of whether GARLI implements them internally.  Amino acid matrices 
-   estimated by GARLI can also have their parameter values fixed for use in other analyses. Note 
-   however that GARLI's matrix input format differs from other programs. (ratematrix = fixed, 
+   amino acid matrix, regardless of whether GARLI implements them internally.  Amino acid matrices
+   estimated by GARLI can also have their parameter values fixed for use in other analyses. Note
+   however that GARLI's matrix input format differs from other programs. (ratematrix = fixed,
    provide matrix in a Nexus GARLI block in the datafile or in a starting conditions file.  See the
    file "examples/LGmodel.mod" for an example.)
 5. Ability to infer internal state probabilities (ancestral states) for amino acid and codon models,
@@ -79,16 +80,16 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
 7. MPI parallel runs can now be checkpointed, allowing entire sets of runs to be restarted.  Be sure
    to read the wiki page detailing the MPI version (http://www.nescent.org/wg/garli/MPI_version)
    to understand in what cases you might want to use this version.
-8. More rigorous error checking of input trees, constraints and parameter values. 
-9. Significant improvements to the precision of parameter optimization.  GARLI now puts 
+8. More rigorous error checking of input trees, constraints and parameter values.
+9. Significant improvements to the precision of parameter optimization.  GARLI now puts
    significant effort into returning the very most optimal parameter values at the end of a search.
-   These should be as accurate as values returned by other programs such as PAUP* or PAML.  
+   These should be as accurate as values returned by other programs such as PAUP* or PAML.
    Previously the estimated parameter values were nearly optimal, but sometimes not quite there.
 10. A "verification mode", which checks that a given configuration file and datafile are valid
     for use with GARLI, without starting an actual analysis.  This can be useful, for example, in
     verifying that all configuration and input is proper while on your local machine before sending
     the input files to a computer cluster.  The output will also tell you how much memory GARLI
-    will be need to be allocated for the run, which might require adjustment of the 
+    will be need to be allocated for the run, which might require adjustment of the
     "availablememory" setting in the configuration file (start GARLI with "-V").
 11. Much easier procedure for compiling of GARLI source code.
 12. Fixes to numerous rare bugs in version 0.96
@@ -112,11 +113,11 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
  Time-Reversible model (GTR), in addition to all of the common "named" models (K2P, HKY, etc).
 10.Speed increases for non-parametric bootstrapping
 
-Condensed summary of new model settings (for more detailed descriptions and 
+Condensed summary of new model settings (for more detailed descriptions and
 for unchanged settings see the manual or support webpage):
 datatype = {nucleotide, aminoacid, codon, codon-aminoacid} - These set the type of model
  to be used.  Note that aminoacid and codon models are MUCH slower than nucleotide models.
--"aminoacid" is for datasets consisting of the 20 aminoacid single letter codes. 
+-"aminoacid" is for datasets consisting of the 20 aminoacid single letter codes.
 -"codon" is for dna data (aligned in frame!) to be analyzed using a 60-62 state model
  that incorporates both the nucleotide substitution process and information on the
  genetic code.  This involves the estimation of at least one dN/dS ratio
@@ -153,4 +154,3 @@ invariantsites = {none} (not allowed in codon model)
 
 For codon or codon-aminoacid:
 Geneticcode = {standard, vertmito, invertmito}
-

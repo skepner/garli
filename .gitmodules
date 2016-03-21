@@ -1,0 +1,3 @@
+[submodule "garli/trunk/ncl"]
+	path = garli/trunk/ncl
+	url = https://github.com/mtholder/ncl
