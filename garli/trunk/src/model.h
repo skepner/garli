@@ -24,6 +24,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <stdint.h>
 #include <math.h>
 #include <vector>
 
