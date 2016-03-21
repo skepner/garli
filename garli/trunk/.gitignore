@@ -1,0 +1,9 @@
+bin
+aclocal.m4
+config.h
+config.status
+configure
+Makefile
+Makefile.in
+src/Garli
+stamp-h1
