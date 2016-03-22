@@ -1648,12 +1648,12 @@ void Population::WriteStateFiles(){
 
 #ifdef OLD_CHECK
 void Population::WriteStateFiles(){
-    char name[100];
+    char name[FILENAME_MAX];
 
     //write the adaptation info checkpoint in binary format
     sprintf(name, "%s.adap.check", conf->ofprefix.c_str());
 #ifdef BOINC
-    char physical_name[256];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(name, physical_name, sizeof(physical_name));
     MFILE out;
     out.open(physical_name, "wb");
@@ -1762,13 +1762,13 @@ void Population::WriteStateFiles(){
 
 //Returns whether or not checkpoints were actually found and read
 bool Population::ReadStateFiles(){
-    char name[100];
+    char name[FILENAME_MAX];
 
     //read the adaptation binary checkpoint
     sprintf(name, "%s.adap.check", conf->ofprefix.c_str());
     FILE *in;
 #ifdef BOINC
-    char physical_name[100];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(name, physical_name, sizeof(physical_name));
     in = boinc_fopen(physical_name, "rb");
 
@@ -1866,12 +1866,12 @@ void Population::WritePopulationCheckpoint(OUTPUT_CLASS &out) {
 
 
 void Population::ReadPopulationCheckpoint(){
-    char str[100];
+    char str[FILENAME_MAX];
     sprintf(str, "%s.pop.check", conf->ofprefix.c_str());
     if(FileExists(str) == false) throw(ErrorException("Could not find checkpoint file %s!\nEither the previous run was not writing checkpoints (checkpoint = 0),\nthe file was moved/deleted or the ofprefix setting\nin the config file was changed.", str));
 
 #ifdef BOINC
-    char physical_name[100];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(str, physical_name, sizeof(physical_name));
     FILE *pin = boinc_fopen(physical_name, "rb");
 
@@ -2753,10 +2753,10 @@ void Population::BetterFinalOptimization(){
         AppendTreeToTreeLog(-1);
 
 #ifdef ENABLE_CUSTOM_PROFILER
-    char fname[100];
+    char fname[FILENAME_MAX];
     sprintf(fname, "%s.profileresults.log", conf->ofprefix.c_str());
 #ifdef BOINC
-    char physical_name[100];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(fname, physical_name, sizeof(physical_name));
     ofstream prof(physical_name);
     //MFILE prof;
@@ -2768,7 +2768,7 @@ void Population::BetterFinalOptimization(){
     /*
 //FROM WRITETREEFILE
 #ifdef BOINC
-    char physical_name[100];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(fname, physical_name, sizeof(physical_name));
     MFILE outf;
     outf.open(physical_name, "w");
@@ -2928,7 +2928,7 @@ void Population::FinalOptimization(){
     outman.unsetf(ios::fixed);
 
 #ifdef ENABLE_CUSTOM_PROFILER
-    char fname[100];
+    char fname[FILENAME_MAX];
     sprintf(fname, "%s.profileresults.log", conf->ofprefix.c_str());
     ofstream prof(fname);
     prof << "dataset: " << conf->datafname << "\t" << "start: " << conf->streefname << endl;
@@ -3501,7 +3501,7 @@ void Population::PerformSearch(){
                 if(conf->searchReps > 1 && storedTrees.size() > 0){
                     //we're doing multiple searches per boot rep, and have successfully completed at least one replicate
                     //(although the present replicate could have been prematurely terminated)
-                    char temp_buf[100];
+                    char temp_buf[FILENAME_MAX];
                     char suffix[100];
                     sprintf(suffix, "boot.tre");
                     DetermineFilename(bootlog_output, temp_buf, suffix);
@@ -3514,7 +3514,7 @@ void Population::PerformSearch(){
                 else if(storedTrees.size() == 1){
                     //We just successfully completed a one-search-rep bootstrap replicate
                     FinishBootstrapRep(storedTrees[0], currentBootstrapRep);
-                    char temp_buf[100];
+                    char temp_buf[FILENAME_MAX];
                     char suffix[100];
                     sprintf(suffix, "boot.tre");
                     DetermineFilename(bootlog_output, temp_buf, suffix);
@@ -3955,7 +3955,7 @@ void Population::VariableStartingTreeOptimization(bool reducing){
 
     ofstream blens;
     for(int precNum = 0;precNum < finalScores.size();precNum++){
-        char filename[100];
+        char filename[FILENAME_MAX];
         if(reducing)
             sprintf(filename, "blens.%s.final.log", conf->ofprefix.c_str());
         else
@@ -4798,7 +4798,7 @@ void Population::WriteTreeFile( const char* treefname, int indnum, bool collapse
 #endif
 
 #ifdef BOINC
-    char physical_name[100];
+    char physical_name[FILENAME_MAX];
     boinc_resolve_filename(filename.c_str(), physical_name, sizeof(physical_name));
     MFILE outf;
     outf.open(physical_name, "w");
@@ -6994,7 +6994,7 @@ void Population::DetermineFilename(output_details details, char *outname, string
     }
 
 void Population::InitializeOutputStreams(){
-    char temp_buf[100];
+    char temp_buf[FILENAME_MAX];
 
     char suffix[100];
     sprintf(suffix, "best");
@@ -7171,7 +7171,7 @@ void Population::InitializeOutputStreams(){
 
 /* OLD WAY
 void Population::InitializeOutputStreams(){
-    char temp_buf[100];
+    char temp_buf[FILENAME_MAX];
     char restart[12];
 
     if(conf->restart == true){
@@ -7937,7 +7937,7 @@ void Population::OptimizeSiteRates(){
     tempIndiv.treeStruct=new Tree();
     tempIndiv.CopySecByRearrangingNodesOfFirst(tempIndiv.treeStruct, &indiv[0]);
 
-    char filename[100];
+    char filename[FILENAME_MAX];
     sprintf(filename, "%s.siterates.log", conf->ofprefix.c_str());
     ofstream out(filename);
 
