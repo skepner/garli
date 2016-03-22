@@ -4811,7 +4811,7 @@ void Population::WriteTreeFile( const char* treefname, int indnum, bool collapse
     string str;
     dataPart->BeginNexusTreesBlock(trans);
     //data->BeginNexusTreesBlock(outf);
-    char temp[101];
+    char temp[200];
     if(indnum == -1)
         sprintf(temp, "tree best = [&U][!GarliScore %f][!GarliModel ", theInd->Fitness());
     else
@@ -4878,7 +4878,7 @@ void Population::WriteTreeFile( const char* treefname, int indnum, bool collapse
     outf.close();
 
     if(conf->outputPhylipTree){//output a phylip formatted tree if desired
-        char phyname[85];
+        char phyname[FILENAME_MAX];
         sprintf(phyname, "%s.phy", treefname);
         ofstream phytree(phyname);
         phytree.precision(8);
@@ -4900,7 +4900,7 @@ void Population::WriteStoredTrees( const char* treefname ){
 
     ofstream phytree;
     if(conf->outputPhylipTree){
-        char phyname[85];
+        char phyname[FILENAME_MAX];
         sprintf(phyname, "%s.all.phy", treefname);
         phytree.open(phyname);
         phytree.precision(8);
