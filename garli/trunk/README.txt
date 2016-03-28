@@ -41,7 +41,8 @@ script, build_garli.sh, which should make compalation trivial on linux or OS X m
 2. Added -o command line option overriding ofprefix in the config file
 to allow running multiple instances of garli on a cluster without
 having dedicated config file for each instance.
-3. Use sranddev when available
+3. Use sranddev when available, use /dev/urandom when available to
+seed random number generator in case randseed=-1 in config
 
 ***New in version 2.1***
 1. MUCH faster parsing of very long alignments.  e.g., alignments millions of nucleotides in

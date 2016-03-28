@@ -57,6 +57,7 @@ typedef int pid_type;
 #include <unistd.h>
 #define PID_FUNC() getpid()
 typedef pid_t pid_type;
+#include <fcntl.h>
 #endif
 
 #ifdef MAC_FRONTEND
@@ -350,8 +351,21 @@ int main( int argc, char* argv[] )
 #ifdef HAVE_SRANDDEV
                 sranddev();
 #else
-                pid_type pid = PID_FUNC();
-                srand((unsigned)time(NULL) + (unsigned)pid);
+                int fd = open("/dev/urandom", O_RDONLY);
+                if (fd < 0) {
+                    pid_type pid = PID_FUNC();
+                    srand((unsigned)time(NULL) + (unsigned)pid);
+                }
+                else {
+                    unsigned rnd_from_dev;
+                    if (read(fd, &rnd_from_dev, sizeof(rnd_from_dev)) == sizeof(rnd_from_dev)) {
+                        srand(rnd_from_dev);
+                    }
+                    else {
+                        srand((unsigned)time(NULL) + (unsigned)(PID_FUNC()));
+                    }
+                    close(fd);
+                }
 #endif
                 randomSeed = RandomInt(1, 1000000);
             }
