@@ -33,19 +33,19 @@ int ConfigReader::UNKNOWN=0;
 int ConfigReader::SECTION=1;
 int ConfigReader::OPTION=2;
 
-ConfigReader::ConfigReader()	{
+ConfigReader::ConfigReader()    {
 
 }
 
-ConfigReader::ConfigReader(const char* filename)	{
+ConfigReader::ConfigReader(const char* filename)    {
     Load(filename);
 }
 
-ConfigReader::~ConfigReader()	{
+ConfigReader::~ConfigReader()   {
 
 }
 
-int ConfigReader::Load(const char* filename)	{
+int ConfigReader::Load(const char* filename)    {
     FILE* file;
 
     // clear all currently loaded sections
@@ -66,12 +66,12 @@ int ConfigReader::Load(const char* filename)	{
     Options options;
     bool first = true;
 
-    while (!feof(file))	{
+    while (!feof(file))     {
 
         type = ReadSectionOrOption(file, name, val);
 
-        if (type == SECTION)	{
-            if (!first)	{
+        if (type == SECTION)    {
+            if (!first)     {
                 sections.insert(pair<string, Options>(sectionName, options));
                 options.clear();
             }
@@ -79,7 +79,7 @@ int ConfigReader::Load(const char* filename)	{
                 first = false;
             sectionName = name;
         }
-        else if (type == OPTION)	{
+        else if (type == OPTION)    {
             options.insert(pair<string, string>(name, val));
         }
 
@@ -96,10 +96,10 @@ int ConfigReader::Load(const char* filename)	{
 /*****************************************************************************************
 ** Save() **
 *****************************************************************************************/
-int ConfigReader::Save(const char* filename)	{
+int ConfigReader::Save(const char* filename)    {
     FILE* file = fopen(filename, "w");
 
-    if (file == NULL)	{
+    if (file == NULL)   {
         printf("Error opening file \"%s\" for writing.\n", filename);
         return -1;
     }
@@ -107,14 +107,14 @@ int ConfigReader::Save(const char* filename)	{
     map<string, Options>::iterator sit = sections.begin();
     map<string, string>::iterator oit;
 
-    while (sit != sections.end())	{
+    while (sit != sections.end())   {
 
         // write the section
         fprintf(file, "[%s]\n", sit->first.c_str());
 
         // write the options
         oit = sit->second.begin();
-        while (oit != sit->second.end())	{
+        while (oit != sit->second.end())    {
             fprintf(file, "%s = %s\n", oit->first.c_str(), oit->second.c_str());
             ++oit;
         }
@@ -132,7 +132,7 @@ int ConfigReader::Save(const char* filename)	{
 /****************************************************************************************/
 /*** AddSection() ***/
 /****************************************************************************************/
-int ConfigReader::AddSection(const char* _name)	{
+int ConfigReader::AddSection(const char* _name)     {
     int rv;
     string name;
     Sections::iterator it;
@@ -151,7 +151,7 @@ int ConfigReader::AddSection(const char* _name)	{
 /****************************************************************************************/
 /*** RemoveSection() ***/
 /****************************************************************************************/
-int ConfigReader::RemoveSection(const char* _name)	{
+int ConfigReader::RemoveSection(const char* _name)  {
     int rv;
     string name;
     Sections::iterator it;
@@ -159,9 +159,9 @@ int ConfigReader::RemoveSection(const char* _name)	{
     name = _name;
     TrimWhiteSpace(name);
     it = sections.find(name);
-    if (it == sections.end())	// section doesn't exist, bomb out
+    if (it == sections.end())   // section doesn't exist, bomb out
         rv = -1;
-    else	{
+    else    {
         sections.erase(it);
         rv = 0;
     }
@@ -171,7 +171,7 @@ int ConfigReader::RemoveSection(const char* _name)	{
 /****************************************************************************************/
 /*** SetSection() ***/
 /****************************************************************************************/
-int ConfigReader::SetSection(const char* name)	{
+int ConfigReader::SetSection(const char* name)  {
     cur_section = name;
     TrimWhiteSpace(cur_section);
     Sections::iterator sit = sections.find(cur_section);
@@ -183,32 +183,32 @@ int ConfigReader::SetSection(const char* name)	{
 /****************************************************************************************/
 /*** GetSection() ***/
 /****************************************************************************************/
-const string ConfigReader::GetCurrentSection()	{
+const string ConfigReader::GetCurrentSection()  {
     return cur_section;
     }
 
 /****************************************************************************************/
 /*** SetOption() ***/
 /****************************************************************************************/
-int ConfigReader::SetOption(const char* _option, const char* _val)	{
+int ConfigReader::SetOption(const char* _option, const char* _val)  {
     int rv;
     string option, val;
     Sections::iterator sit;
     Options::iterator oit;
 
     sit = sections.find(cur_section);
-    if (sit == sections.end())	// section doesn't exist...bomb out
+    if (sit == sections.end())  // section doesn't exist...bomb out
         rv = -1;
-    else	{
+    else    {
         option = _option;
         val = _val;
         TrimWhiteSpace(option);
         TrimWhiteSpace(val);
         oit = sit->second.find(option);
-        if (oit == sit->second.end())	{	// option doesn't exist, create it
+        if (oit == sit->second.end())   {   // option doesn't exist, create it
             rv = 0;
         }
-        else	{	// option exists, overwrite
+        else    {   // option exists, overwrite
             sit->second.erase(oit);
             rv = 1;
         }
@@ -221,23 +221,23 @@ int ConfigReader::SetOption(const char* _option, const char* _val)	{
 /****************************************************************************************/
 /*** RemoveOption() ***/
 /****************************************************************************************/
-int ConfigReader::RemoveOption(const char* _option)	{
+int ConfigReader::RemoveOption(const char* _option)     {
     int rv;
     string option;
     Sections::iterator sit;
     Options::iterator oit;
 
     sit = sections.find(cur_section);
-    if (sit == sections.end())	// section doesn't exist, bomb out
+    if (sit == sections.end())  // section doesn't exist, bomb out
         rv = -2;
-    else	{
+    else    {
         option = _option;
         TrimWhiteSpace(option);
         oit = sit->second.find(option);
-        if (oit == sit->second.end())	{	// option doesn't exist, bomb out
+        if (oit == sit->second.end())   {   // option doesn't exist, bomb out
             rv = -1;
         }
-        else	{	// option exists, remove it
+        else    {   // option exists, remove it
             sit->second.erase(oit);
             rv = 0;
         }
@@ -249,28 +249,30 @@ int ConfigReader::RemoveOption(const char* _option)	{
 /****************************************************************************************/
 /*** GetStringOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetStringOption(const char* _option, string& val, bool optional /*=false*/)	{
+int ConfigReader::GetStringOption(const char* _option, string& val, bool optional /*=false*/)
+{
     int rv;
     string option;
     Sections::iterator sit;
     Options::iterator oit;
 
     sit = sections.find(cur_section);
-    if (sit == sections.end())	// section doesn't exist, bomb out
+    if (sit == sections.end()) { // section doesn't exist, bomb out
         rv = -2;
-            else	{
-                option = _option;
-                TrimWhiteSpace(option);
-                oit = sit->second.find(option);
-                if (oit == sit->second.end())	{	// option doesn't exist, bomb out
-                    rv = -1;
-                    if(!optional) throw ErrorException("could not find string configuration entry \"%s\"", option.c_str());
-                }
-                else	{	// option exists, get the value
-                    val = oit->second;
-                    rv = 0;
-                }
-            }
+    }
+    else {
+        option = _option;
+        TrimWhiteSpace(option);
+        oit = sit->second.find(option);
+        if (oit == sit->second.end())   {   // option doesn't exist, bomb out
+            rv = -1;
+            if(!optional) throw ErrorException("could not find string configuration entry \"%s\"", option.c_str());
+        }
+        else    {   // option exists, get the value
+            val = oit->second;
+            rv = 0;
+        }
+    }
 
     return rv;
 }
@@ -278,10 +280,10 @@ int ConfigReader::GetStringOption(const char* _option, string& val, bool optiona
 /****************************************************************************************/
 /*** GetBoolOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetBoolOption(const char* option, bool& val, bool optional /*=false*/)	{
+int ConfigReader::GetBoolOption(const char* option, bool& val, bool optional /*=false*/)    {
     int rv;
     string str;
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         // lower case it
         for (int i = 0; i < (int)str.length(); ++i)
             str[i] = tolower(str[i]);
@@ -311,11 +313,11 @@ int ConfigReader::GetBoolOption(const char* option, bool& val, bool optional /*=
 /****************************************************************************************/
 /*** GetIntOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetIntOption(const char* option, int& val, bool optional /*=false*/)	{
+int ConfigReader::GetIntOption(const char* option, int& val, bool optional /*=false*/)  {
     int rv;
     string str;
     FLOAT_TYPE dummy;//read into a FLOAT_TYPE first to check bounds
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         dummy = (FLOAT_TYPE) atof(str.c_str());
         if(dummy > (INT_MAX-1)) throw ErrorException("entry for option \"%s\" (%s) is greater than its max (%u)" , option, str.c_str(), (INT_MAX-1));
         if(fabs(dummy - (int)dummy) > 0.0) throw ErrorException("entry for option \"%s\" (%s) is not an integer" , option, str.c_str());
@@ -333,11 +335,11 @@ int ConfigReader::GetIntOption(const char* option, int& val, bool optional /*=fa
 /****************************************************************************************/
 /*** GetIntNonZeroOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetIntNonZeroOption(const char* option, int& val, bool optional /*=false*/)	{
+int ConfigReader::GetIntNonZeroOption(const char* option, int& val, bool optional /*=false*/)   {
     int rv;
     string str;
     FLOAT_TYPE dummy;//read into a FLOAT_TYPE first to check bounds
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         dummy = (FLOAT_TYPE) atof(str.c_str());
         if(dummy > (INT_MAX-1)) throw ErrorException("entry for option \"%s\" (%s) is greater than its max (%u)" , option, str.c_str(), (INT_MAX-1));
         if(FloatingPointEquals(dummy, ZERO_POINT_ZERO, 1e-8)) throw ErrorException("entry for option \"%s\" cannot be zero", option);
@@ -356,11 +358,11 @@ int ConfigReader::GetIntNonZeroOption(const char* option, int& val, bool optiona
 /****************************************************************************************/
 /*** GetUnsignedOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetUnsignedOption(const char* option, unsigned& val, bool optional /*=false*/)	{
+int ConfigReader::GetUnsignedOption(const char* option, unsigned& val, bool optional /*=false*/)    {
     int rv;
     string str;
     FLOAT_TYPE dummy;//read into a FLOAT_TYPE first to check sign and bounds
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         dummy = (FLOAT_TYPE) atof(str.c_str());
         if(dummy < 0.0) throw ErrorException("entry for option \"%s\" must be >=0", option);
         if(dummy > (UINT_MAX-1)) throw ErrorException("entry for option \"%s\" (%s) is greater than its max (%u)" , option, str.c_str(), (UINT_MAX-1));
@@ -379,11 +381,11 @@ int ConfigReader::GetUnsignedOption(const char* option, unsigned& val, bool opti
 /****************************************************************************************/
 /*** GetUnsignedOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetUnsignedNonZeroOption(const char* option, unsigned& val, bool optional /*=false*/)	{
+int ConfigReader::GetUnsignedNonZeroOption(const char* option, unsigned& val, bool optional /*=false*/)     {
     int rv;
     string str;
     FLOAT_TYPE dummy;//read into a FLOAT_TYPE first to check sign and bounds
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         dummy = (FLOAT_TYPE) atof(str.c_str());
         if(!(dummy > 0.0)) throw ErrorException("entry for option \"%s\" must be >0", option);
         if(dummy > (UINT_MAX-1)) throw ErrorException("entry for option \"%s\" (%s) is greater than its max (%u)" , option, str.c_str(), (UINT_MAX-1));
@@ -403,17 +405,17 @@ int ConfigReader::GetUnsignedNonZeroOption(const char* option, unsigned& val, bo
 /****************************************************************************************/
 /*** GetIntRangeOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetIntRangeOption(const char* option, int& val1, int& val2)	{
+int ConfigReader::GetIntRangeOption(const char* option, int& val1, int& val2)   {
     int rv;
     string str;
-    if (GetStringOption(option, str) == 0)	{  // option exists
+    if (GetStringOption(option, str) == 0)  {  // option exists
 
         // split up the string
         int len = (int)str.length();
         int i = (int)str.find(' ', 0);
         if (i < 0)
             rv = -1;
-        else	{
+        else    {
             val1 = atoi(str.substr(0, i).c_str());
             val2 = atoi(str.substr(i+1, len-i).c_str());
             rv = 0;
@@ -430,10 +432,10 @@ int ConfigReader::GetIntRangeOption(const char* option, int& val1, int& val2)	{
 /****************************************************************************************/
 /*** GetFloatOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetFloatOption(const char* option, float& val)	{
+int ConfigReader::GetFloatOption(const char* option, float& val)    {
     int rv;
     string str;
-    if (GetStringOption(option, str) == 0)	{  // option exists
+    if (GetStringOption(option, str) == 0)  {  // option exists
         val = (float)atof(str.c_str());
         rv = 0;
     }
@@ -446,17 +448,17 @@ int ConfigReader::GetFloatOption(const char* option, float& val)	{
 /****************************************************************************************/
 /*** GetFloatRangeOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetFloatRangeOption(const char* option, float& val1, float& val2)	{
+int ConfigReader::GetFloatRangeOption(const char* option, float& val1, float& val2)     {
     int rv;
     string str;
-    if (GetStringOption(option, str) == 0)	{  // option exists
+    if (GetStringOption(option, str) == 0)  {  // option exists
 
         // split up the string
         int len = (int)str.length();
         int i = (int)str.find(' ', 0);
         if (i < 0)
             rv = -1;
-        else	{
+        else    {
             val1 = (float)atof(str.substr(0, i).c_str());
             val2 = (float)atof(str.substr(i+1, len-i).c_str());
             rv = 0;
@@ -471,10 +473,10 @@ int ConfigReader::GetFloatRangeOption(const char* option, float& val1, float& va
 /****************************************************************************************/
 /*** GetDoubleOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)	{
+int ConfigReader::GetDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)    {
     int rv;
     string str;
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         val = (FLOAT_TYPE) atof(str.c_str());
         rv = 0;
     }
@@ -490,10 +492,10 @@ int ConfigReader::GetDoubleOption(const char* option, FLOAT_TYPE& val, bool opti
 /*** GetPositiveDoubleOption() ***/
 /****************************************************************************************/
 //this is just a version of GetDoubleOption that checks that the value is non-negative
-int ConfigReader::GetPositiveDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)	{
+int ConfigReader::GetPositiveDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)    {
     int rv;
     string str;
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         val = (FLOAT_TYPE) atof(str.c_str());
         if(val < 0.0) throw ErrorException("configuration entry \"%s\" cannot be negative", option);
         rv = 0;
@@ -512,10 +514,10 @@ int ConfigReader::GetPositiveDoubleOption(const char* option, FLOAT_TYPE& val, b
 //this is just a version of GetDoubleOption that checks that the value is non-negative, and that it is not
 //zero.  atof returns zero when it encounters an error, which is very annoying behavior.  When the entry must
 //be nonzero, at least we can check for that
-int ConfigReader::GetPositiveNonZeroDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)	{
+int ConfigReader::GetPositiveNonZeroDoubleOption(const char* option, FLOAT_TYPE& val, bool optional /*=false*/)     {
     int rv;
     string str;
-    if (GetStringOption(option, str, optional) == 0)	{  // option exists
+    if (GetStringOption(option, str, optional) == 0)    {  // option exists
         val = (FLOAT_TYPE) atof(str.c_str());
         if(val == ZERO_POINT_ZERO) throw ErrorException("configuration entry \"%s\" cannot be zero (possible problems reading this entry)", option);
         if(val < 0.0) throw ErrorException("configuration entry \"%s\" cannot be negative", option);
@@ -532,17 +534,17 @@ int ConfigReader::GetPositiveNonZeroDoubleOption(const char* option, FLOAT_TYPE&
 /****************************************************************************************/
 /*** GetDoubleRangeOption() ***/
 /****************************************************************************************/
-int ConfigReader::GetDoubleRangeOption(const char* option, FLOAT_TYPE& val1, FLOAT_TYPE& val2)	{
+int ConfigReader::GetDoubleRangeOption(const char* option, FLOAT_TYPE& val1, FLOAT_TYPE& val2)  {
     int rv;
     string str;
-    if (GetStringOption(option, str) == 0)	{  // option exists
+    if (GetStringOption(option, str) == 0)  {  // option exists
 
         // split up the string
         int len = (int)str.length();
         int i = (int)str.find(' ', 0);
         if (i < 0)
             rv = -1;
-        else	{
+        else    {
             val1 = (FLOAT_TYPE) atof(str.substr(0, i).c_str());
             val2 = (FLOAT_TYPE) atof(str.substr(i+1, len-i).c_str());
             rv = 0;
@@ -560,14 +562,14 @@ int ConfigReader::GetDoubleRangeOption(const char* option, FLOAT_TYPE& val1, FLO
 ** PRIVATE METHODS ***********************************************************************
 *****************************************************************************************/
 
-int ConfigReader::ReadSectionOrOption(FILE* file, string& name, string& val)	{
+int ConfigReader::ReadSectionOrOption(FILE* file, string& name, string& val)    {
 
     string line;
     size_t index;
     size_t len;
     int type = UNKNOWN;
 
-    do	{
+    do  {
         len = ReadLine(file, line);
         if (line.find('=') < len)
             type = OPTION;
@@ -576,12 +578,12 @@ int ConfigReader::ReadSectionOrOption(FILE* file, string& name, string& val)	{
     }
     while (type == UNKNOWN && !feof(file));
 
-    if (type == SECTION)	{
+    if (type == SECTION)    {
         line.erase(line.find('['), 1);
         line.erase(line.find(']'), 1);
         name = line;
     }
-    else if (type == OPTION)	{
+    else if (type == OPTION)    {
         index = line.find('=');
         val = line.substr(index+1);
         name = line.substr(0, index);
@@ -594,13 +596,13 @@ int ConfigReader::ReadSectionOrOption(FILE* file, string& name, string& val)	{
     return type;
 }
 
-int ConfigReader::ReadLine(FILE* file, string& line)	{
+int ConfigReader::ReadLine(FILE* file, string& line)    {
     char ch;
 
     line = "";
 
     fread(&ch, sizeof(char), 1, file);
-    while (ch != '\n' && ch != '\r' && !feof(file))	{
+    while (ch != '\n' && ch != '\r' && !feof(file))     {
         line += ch;
         fread(&ch, sizeof(char), 1, file);
     }
@@ -608,14 +610,14 @@ int ConfigReader::ReadLine(FILE* file, string& line)	{
     return (int)line.length();
 }
 
-void ConfigReader::TrimWhiteSpace(string& str)	{
+void ConfigReader::TrimWhiteSpace(string& str)  {
     int index;
 
     if (str.length() == 0)
         return;
 
     index = (int)str.find(' ', 0);
-    while (index != -1 && index < (int)str.length())	{
+    while (index != -1 && index < (int)str.length())    {
         while (index < (int)str.length()-1 && str[index+1] == ' ')
             str.erase(index+1, 1);
         index = (int)str.find(' ', index+1);

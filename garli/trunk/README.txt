@@ -1,4 +1,5 @@
-// GARLI Version 2.1 (September 2014)
+// GARLI Version 2.1a (March 2016)
+// based on GARLI Version 2.1 (September 2014)
 // Copyright 2005-2014 Derrick J. Zwickl
 // email: garli.support@gmail.com
 // Modified by Eugene Skepner <github@skepner.eu> 2016-03-21
@@ -33,6 +34,14 @@ using the program.  For very basic usage see QuickStart.txt.
 
 ->For compilation help see the INSTALL file.  Versions >= 2.0 comes with an extremely easy build
 script, build_garli.sh, which should make compalation trivial on linux or OS X machines.
+
+***New in version 2.1a***
+1. Multiple temporary buffers expanded to handle long pathnames
+(according to OS rules)
+2. Added -o command line option overriding ofprefix in the config file
+to allow running multiple instances of garli on a cluster without
+having dedicated config file for each instance.
+3. Use sranddev when available
 
 ***New in version 2.1***
 1. MUCH faster parsing of very long alignments.  e.g., alignments millions of nucleotides in

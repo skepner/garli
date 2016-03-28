@@ -33,7 +33,7 @@ build_ncl()
 build_garli()
 {
     ./bootstrap.sh &&
-        ./configure $@ --prefix=`pwd` --with-ncl=`pwd`/ncl/installed &&
+        ./configure "$@" --prefix=`pwd` --with-ncl=`pwd`/ncl/installed &&
         make $MAKE_J install
 }
 

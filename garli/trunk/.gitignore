@@ -1,5 +1,6 @@
 bin
 aclocal.m4
+config.h.in
 config.h
 config.status
 configure
