@@ -37,7 +37,7 @@ using namespace std;
 
 //extern ModelSpecification modSpec;
 
-#define MAX_TAXON_LABEL		100
+#define MAX_TAXON_LABEL		500
 
 extern rng rnd;
 extern OutputManager outman;
